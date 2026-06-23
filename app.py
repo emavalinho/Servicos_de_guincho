@@ -31,6 +31,44 @@ with open("Divisas_de_bairros.geojson", encoding="utf-8") as f:
 with open("SERVICOS_REBOQUE.geojson", encoding="utf-8") as f:
     reboque_geojson = json.load(f)
 
+
+# =====================================================
+# ESTATÍSTICAS DOS BAIRROS
+# =====================================================
+
+estatisticas = []
+
+for bairro_feature in bairros_geojson["features"]:
+
+    props = bairro_feature["properties"]
+
+    nome_bairro = props.get("NOME")
+
+    area_m2 = props.get("SHAPE_AREA", 0)
+
+    quantidade = 0
+
+    for guincho in reboque_geojson["features"]:
+
+        if guincho["properties"].get("BAIRRO") == nome_bairro:
+            quantidade += 1
+
+    area_km2 = area_m2 / 1000000
+
+    densidade = 0
+
+    if area_km2 > 0:
+        densidade = quantidade / area_km2
+
+    estatisticas.append({
+        "BAIRRO": nome_bairro,
+        "AREA_KM2": round(area_km2, 2),
+        "GUINCHOS": quantidade,
+        "DENSIDADE": round(densidade, 2)
+    })
+
+df_estatisticas = pd.DataFrame(estatisticas)
+
 # =====================================================
 # LISTA DE BAIRROS
 # =====================================================
@@ -67,18 +105,34 @@ for feature in reboque_geojson["features"]:
 # INDICADORES
 # =====================================================
 
-col1, col2 = st.columns(2)
+bairro_info = df_estatisticas[
+    df_estatisticas["BAIRRO"] == bairro
+].iloc[0]
+
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.metric(
-        "Bairro Selecionado",
+        "Bairro",
         bairro
     )
 
 with col2:
     st.metric(
-        "Quantidade de Guinchos",
-        len(guinchos_bairro)
+        "Área (km²)",
+        bairro_info["AREA_KM2"]
+    )
+
+with col3:
+    st.metric(
+        "Guinchos",
+        bairro_info["GUINCHOS"]
+    )
+
+with col4:
+    st.metric(
+        "Guinchos/km²",
+        bairro_info["DENSIDADE"]
     )
 
 # =====================================================
@@ -172,6 +226,29 @@ folium_static(
     m,
     width=1200,
     height=650
+)
+
+st.subheader("Quantidade de Guinchos por Bairro")
+
+ranking = df_estatisticas.sort_values(
+    "GUINCHOS",
+    ascending=False
+)
+
+st.bar_chart(
+    ranking.set_index("BAIRRO")["GUINCHOS"]
+)
+
+st.subheader("Área do Bairro x Quantidade de Guinchos")
+
+grafico_disp = df_estatisticas[
+    ["BAIRRO", "AREA_KM2", "GUINCHOS"]
+]
+
+st.scatter_chart(
+    grafico_disp,
+    x="AREA_KM2",
+    y="GUINCHOS"
 )
 
 # =====================================================
