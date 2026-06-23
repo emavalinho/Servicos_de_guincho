@@ -1,5 +1,6 @@
 import streamlit as st
 import json
+import pandas as pd
 import folium
 
 from folium.plugins import MarkerCluster
@@ -7,36 +8,38 @@ from folium.plugins import HeatMap
 from folium.plugins import MeasureControl
 from streamlit_folium import folium_static
 
-# --------------------------------------------------
-# Configuração da página
-# --------------------------------------------------
+# =====================================================
+# CONFIGURAÇÃO DA PÁGINA
+# =====================================================
 
 st.set_page_config(
     page_title="Serviços de Guincho em Curitiba",
+    page_icon="🚛",
     layout="wide"
 )
 
-st.title("Serviços de Guincho em Curitiba")
+st.title("🚛 Serviços de Guincho em Curitiba")
+st.markdown("Dashboard temático por bairro")
 
-# --------------------------------------------------
-# Leitura dos GeoJSON
-# --------------------------------------------------
+# =====================================================
+# LEITURA DOS DADOS
+# =====================================================
 
 with open("Divisas_de_bairros.geojson", encoding="utf-8") as f:
-    bairros = json.load(f)
+    bairros_geojson = json.load(f)
 
 with open("SERVICOS_REBOQUE.geojson", encoding="utf-8") as f:
-    reboque = json.load(f)
+    reboque_geojson = json.load(f)
 
-# --------------------------------------------------
-# Lista de bairros
-# --------------------------------------------------
+# =====================================================
+# LISTA DE BAIRROS
+# =====================================================
 
 lista_bairros = sorted(
     list(
         set(
             feat["properties"]["BAIRRO"]
-            for feat in reboque["features"]
+            for feat in reboque_geojson["features"]
             if feat["properties"].get("BAIRRO")
         )
     )
@@ -47,9 +50,40 @@ bairro = st.sidebar.selectbox(
     lista_bairros
 )
 
-# --------------------------------------------------
-# Mapa base
-# --------------------------------------------------
+# =====================================================
+# FILTRAGEM
+# =====================================================
+
+guinchos_bairro = []
+
+for feature in reboque_geojson["features"]:
+
+    props = feature["properties"]
+
+    if props.get("BAIRRO") == bairro:
+        guinchos_bairro.append(feature)
+
+# =====================================================
+# INDICADORES
+# =====================================================
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.metric(
+        "Bairro Selecionado",
+        bairro
+    )
+
+with col2:
+    st.metric(
+        "Quantidade de Guinchos",
+        len(guinchos_bairro)
+    )
+
+# =====================================================
+# MAPA
+# =====================================================
 
 m = folium.Map(
     location=[-25.50, -49.30],
@@ -57,24 +91,20 @@ m = folium.Map(
     tiles="OpenStreetMap"
 )
 
-# --------------------------------------------------
 # Bairros
-# --------------------------------------------------
 
 folium.GeoJson(
-    bairros,
+    bairros_geojson,
     name="Bairros",
     style_function=lambda x: {
-        "fillColor": "#1f77b4",
-        "color": "#000000",
+        "fillColor": "#4F81BD",
+        "color": "black",
         "weight": 1,
-        "fillOpacity": 0.10
+        "fillOpacity": 0.15
     }
 ).add_to(m)
 
-# --------------------------------------------------
 # Cluster
-# --------------------------------------------------
 
 cluster = MarkerCluster(
     name="Serviços de Guincho"
@@ -82,16 +112,11 @@ cluster = MarkerCluster(
 
 locations = []
 
-# --------------------------------------------------
-# Pontos filtrados por bairro
-# --------------------------------------------------
+# Marcadores
 
-for feature in reboque["features"]:
+for feature in guinchos_bairro:
 
     props = feature["properties"]
-
-    if props.get("BAIRRO") != bairro:
-        continue
 
     coords = feature["geometry"]["coordinates"]
 
@@ -124,9 +149,7 @@ for feature in reboque["features"]:
         [lat, lon]
     )
 
-# --------------------------------------------------
-# Heat Map
-# --------------------------------------------------
+# HeatMap
 
 if len(locations) > 0:
 
@@ -135,9 +158,7 @@ if len(locations) > 0:
         name="Mapa de Calor"
     ).add_to(m)
 
-# --------------------------------------------------
-# Controles
-# --------------------------------------------------
+# Ferramentas
 
 folium.LayerControl().add_to(m)
 
@@ -145,30 +166,48 @@ m.add_child(
     MeasureControl()
 )
 
-# --------------------------------------------------
-# Indicadores
-# --------------------------------------------------
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.metric(
-        "Bairro Selecionado",
-        bairro
-    )
-
-with col2:
-    st.metric(
-        "Total de Guinchos",
-        len(locations)
-    )
-
-# --------------------------------------------------
-# Mapa
-# --------------------------------------------------
+# Exibir mapa
 
 folium_static(
     m,
     width=1200,
-    height=700
+    height=650
+)
+
+# =====================================================
+# TABELA
+# =====================================================
+
+dados_tabela = []
+
+for feature in guinchos_bairro:
+
+    props = feature["properties"]
+
+    dados_tabela.append({
+        "Empresa": props.get(
+            "NOME_EMPRESARIAL",
+            ""
+        ),
+        "Bairro": props.get(
+            "BAIRRO",
+            ""
+        ),
+        "CEP": props.get(
+            "CEP",
+            ""
+        )
+    })
+
+df = pd.DataFrame(
+    dados_tabela
+)
+
+st.subheader(
+    f"Empresas de Guincho - {bairro}"
+)
+
+st.dataframe(
+    df,
+    use_container_width=True
 )
