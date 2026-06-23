@@ -172,4 +172,3 @@ folium_static(
     width=1200,
     height=700
 )
-```
