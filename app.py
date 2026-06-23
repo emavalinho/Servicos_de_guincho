@@ -52,14 +52,6 @@ for feature in reboque["features"]:
     st.write(geom["coordinates"])
 
     break
-    
-        folium.Marker(
-            [lat, lon]
-        ).add_to(cluster)
-
-        locations.append(
-            [lat, lon]
-        )
 
 # HeatMap
 if len(locations) > 0:
