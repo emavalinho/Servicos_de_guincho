@@ -16,10 +16,10 @@ st.set_page_config(
 st.title("Serviços de Guincho em Curitiba")
 
 # Leitura dos GeoJSON
-with open("data/Divisas_de_bairros.geojson", encoding="utf-8") as f:
+with open("Divisas_de_bairros.geojson", encoding="utf-8") as f:
     bairros = json.load(f)
 
-with open("data/SERVICOS_REBOQUE.geojson", encoding="utf-8") as f:
+with open("SERVICOS_REBOQUE.geojson", encoding="utf-8") as f:
     reboque = json.load(f)
 
 # Mapa base
