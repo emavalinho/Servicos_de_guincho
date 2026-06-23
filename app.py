@@ -22,6 +22,8 @@ with open("Divisas_de_bairros.geojson", encoding="utf-8") as f:
 with open("SERVICOS_REBOQUE.geojson", encoding="utf-8") as f:
     reboque = json.load(f)
 
+st.json(reboque["features"][0]["properties"])
+
 # Mapa base
 m = folium.Map(
     location=[-25.5, -49.3],
