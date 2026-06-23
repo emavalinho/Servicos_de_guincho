@@ -47,10 +47,12 @@ for feature in reboque["features"]:
 
     geom = feature["geometry"]
 
-    if geom["type"] == "Point":
+    st.write(geom["type"])
 
-        lon, lat = geom["coordinates"]
+    st.write(geom["coordinates"])
 
+    break
+    
         folium.Marker(
             [lat, lon]
         ).add_to(cluster)
