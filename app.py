@@ -1,5 +1,5 @@
 import streamlit as st
-import geopandas as gpd
+import json
 import folium
 
 from folium.plugins import MarkerCluster
@@ -7,6 +7,7 @@ from folium.plugins import HeatMap
 from folium.plugins import MeasureControl
 from streamlit_folium import folium_static
 
+# Configuração da página
 st.set_page_config(
     page_title="Serviços de Guincho em Curitiba",
     layout="wide"
@@ -14,73 +15,75 @@ st.set_page_config(
 
 st.title("Serviços de Guincho em Curitiba")
 
-# leitura dos dados
-bairros = gpd.read_file(
-    "data/Divisas_de_bairros.geojson"
-)
+# Leitura dos GeoJSON
+with open("data/Divisas_de_bairros.geojson", encoding="utf-8") as f:
+    bairros = json.load(f)
 
-reboque = gpd.read_file(
-    "data/SERVICOS_REBOQUE.geojson"
-)
+with open("data/SERVICOS_REBOQUE.geojson", encoding="utf-8") as f:
+    reboque = json.load(f)
 
-# mapa base
+# Mapa base
 m = folium.Map(
     location=[-25.5, -49.3],
-    zoom_start=12
+    zoom_start=12,
+    tiles="OpenStreetMap"
 )
 
-# bairros
+# Camada dos bairros
 folium.GeoJson(
     bairros,
     name="Bairros"
 ).add_to(m)
 
-# cluster
+# Cluster de guinchos
 cluster = MarkerCluster(
     name="Guinchos"
 ).add_to(m)
 
-for idx, row in reboque.iterrows():
-
-    folium.Marker(
-        [
-            row.geometry.y,
-            row.geometry.x
-        ]
-    ).add_to(cluster)
-
-# heatmap
 locations = []
 
-for idx, row in reboque.iterrows():
+# Percorre os pontos do GeoJSON
+for feature in reboque["features"]:
 
-    locations.append(
-        [
-            row.geometry.y,
-            row.geometry.x
-        ]
-    )
+    geom = feature["geometry"]
 
-HeatMap(
-    locations,
-    name="Mapa de Calor"
-).add_to(m)
+    if geom["type"] == "Point":
 
-# controle
+        lon, lat = geom["coordinates"]
+
+        folium.Marker(
+            [lat, lon]
+        ).add_to(cluster)
+
+        locations.append(
+            [lat, lon]
+        )
+
+# HeatMap
+if len(locations) > 0:
+
+    HeatMap(
+        locations,
+        name="Mapa de Calor"
+    ).add_to(m)
+
+# Controle de camadas
 folium.LayerControl().add_to(m)
 
-# medição
+# Ferramenta de medição
 m.add_child(
     MeasureControl()
 )
 
+# Exibição do mapa
 folium_static(
     m,
     width=1200,
     height=700
 )
 
+# Indicador
 st.metric(
     "Total de Guinchos",
-    len(reboque)
+    len(locations)
 )
