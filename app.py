@@ -47,9 +47,7 @@ for feature in reboque["features"]:
 
     geom = feature["geometry"]
 
-    st.write(geom["type"])
-
-    st.write(geom["coordinates"])
+    st.json(geom)
 
     break
 
